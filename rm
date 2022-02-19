@@ -1,0 +1,205 @@
+#!/bin/bash
+#
+#
+# ===============
+# This is a modified rm program to move SRC to ~/.myTrash instead of remove it.
+# When this is executed from other script or program, then `/bin/rm` is executed.
+#
+# Usage:
+#     $0 [OPTION]... SRC [SRC]...
+#
+# Options:
+#     -h, --help
+#     -n, --dry-run
+#     -d, --delete  ----  `rm -rf SRC` is executed using `/bin/rm` (Be careful!!!)
+#         --restore ----  Restore previously moved files to their original locations.
+#                             Previously moved history is saved in `~/.myTrash/.moved.log`
+#
+
+
+# https://stackoverflow.com/questions/4261876/check-if-bash-script-was-invoked-from-a-shell-or-another-script-application
+# If own `rm` script is executed from other script or program, system's `rm` is executed
+PSOUT="$(ps -o stat= -p $PPID)$(ps -o stat= -p $$)"
+if [[ !$PSOUT =~ ^(Ss S+|Ss+ S) ]]; then
+    /bin/rm $@
+    exit 0
+fi
+
+
+set -Ceu
+
+function help () {
+    awk -v CMD="$(basename $0)" 'NR > 2 {
+    if (/^#/) { sub("^# ?", ""); sub("\\$0", CMD); sub("Be careful!!!", "\033[31;1m\&\033[0m"); print }
+    else { exit }
+    }' $0
+    exit 1
+}
+
+function e_newline() {
+    printf "\n"
+}
+
+function e_header() {
+    printf " \033[37;1m%s\033[m\n" "$*"
+}
+
+function e_important() {
+    printf " \033[31;1m%s\033[m\n" "$*"
+}
+
+function ink() {
+    if [ "$#" -eq 0 -o "$#" -gt 2 ]; then
+        echo "Usage: ink <color> <text>"
+        echo "Colors:"
+        echo "  black, white, red, green, yellow, blue, purple, cyan, gray"
+        return 1
+    fi
+
+    local open="\033["
+    local close="${open}0m"
+    local black="0;30m"
+    local red="1;31m"
+    local green="1;32m"
+    local yellow="1;33m"
+    local blue="1;34m"
+    local purple="1;35m"
+    local cyan="1;36m"
+    local gray="0;37m"
+    local white="$close"
+
+    local text="$1"
+    local color="$close"
+
+    if [ "$#" -eq 2 ]; then
+        text="$2"
+        case "$1" in
+            black | red | green | yellow | blue | purple | cyan | gray | white)
+            eval color="\$$1"
+            ;;
+        esac
+    fi
+
+    printf "${open}${color}${text}${close}"
+}
+
+# Avoid split file name with white space
+SAVEIFS=IFS
+IFS=$(echo -en "\n\b")
+
+[[ $# = 0 ]] && help
+while (( $# > 0 )); do
+    case $1 in
+        -h | --help)
+            help
+            ;;
+        -n | --dry-run)
+            isDryRun=$1
+            ;;
+        -d | --delete)
+            isDelete=$1
+            ;;
+        --restore)
+            RESTORE=$1
+            ;;
+        -*)
+            echo
+            echo "Illegal option -- '$(echo $1 | sed 's/^-*//')'." 1>&2
+            help
+            ;;
+        *)
+            if [[ -z ${ARGS:-} ]]; then
+                ARGS=("$1")
+            else
+                ARGS=("${ARGS[@]}" "$1")
+            fi
+            ;;
+    esac
+    shift
+done
+[[ -z ${ARGS:-} && -z ${RESTORE:-} ]] && help
+
+
+TRASH="$HOME/.myTrash"
+[[ ! -e $TRASH ]] && mkdir -p $TRASH
+
+
+function move_to_trash() {
+    SRC="$1"
+    FNAME="$(basename $1)"
+    DEST="${TRASH}/${FNAME}"
+
+    if [[ "${isDryRun:-}" ]]; then
+        ink cyan "from"
+        ink gray " $(realpath ${SRC})"
+        ink cyan " to"
+        ink gray " $DEST\n"
+    else
+        if [[ "${isDelete:-}" ]]; then
+            /bin/rm -rf "$SRC"
+        else
+            # If $DEST file is duplicated, older one is renamed with date.
+            [[ -e "$DEST" ]] && { mv "$DEST" "${DEST}-$(date +'%Y%m%d%H%M%S')"; }
+            mv "$SRC" "${DEST}"
+        fi
+    fi
+    return 0
+}
+
+function safe_rm() {
+    [[ "${isDryRun:-}" ]] && { ink cyan "\nBellow files will be moved...\n"; }
+    for i in "${ARGS[@]}"; do
+        move_to_trash "$i"
+    done
+    return 0
+}
+
+function move_from_trash() {
+    DEST="$1"
+    FNAME="$(basename $1)"
+    SRC="${TRASH}/${FNAME}"
+
+    ink gray " $DEST\n"
+    
+    # If $DEST file is duplicated, older one is renamed with date.
+    [[ -e "$DEST" ]] && { e_important "$DEST is exist."; exit 1; }
+    [[ -z "${isDryRun:-}" ]] && { mv "$SRC" "$DEST"; }
+    return 0
+}
+
+function restore() {
+    ink cyan "\nBellow files are restored...\n"
+    while read F; do
+        [[ "${#F}" > 0 ]] && { move_from_trash "$F"; } 
+    done < $LOGFILE
+    e_newline
+}
+
+
+LOGFILE="${HOME}/.myTrash/.moved.log"
+
+if [[ "${RESTORE:-}" ]]; then
+    if [[ "${isDelete:-}" ]]; then
+        e_important "-d/--delete and --restore options cannot be used simultaneously."
+    elif [[ -e $LOGFILE ]]; then
+        restore        
+    else
+        e_important "You have no removed data."
+    fi
+else
+    safe_rm && [[ -z "${isDryRun:-}" ]] && {
+        REMOVED_LIST=()
+        for i in "${ARGS[@]}"; do
+            REMOVED_LIST+="$(realpath $i)\n"
+        done
+        [[ -z "${isDelete:-}" ]] && {
+            echo -e "${REMOVED_LIST[@]}" >| ~/.myTrash/.moved.log;
+        }
+    }
+fi
+
+[[ "${isDryRun:-}" ]] && { e_important "This is dry run. File are unchanged."; }
+
+
+IFS=$SAVEIFS
+

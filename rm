@@ -87,6 +87,7 @@ function ink() {
 SAVEIFS=IFS
 IFS=$(echo -en "\n\b")
 
+# https://zenn.dev/kawarimidoll/articles/d546892a6d36eb
 [[ $# = 0 ]] && help
 while (( $# > 0 )); do
     case $1 in

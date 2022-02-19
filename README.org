@@ -1,0 +1,20 @@
+* rm-alternative
+
+#+begin_src bash
+$ rm --help
+
+This is a modified rm program to move SRC to ~/.myTrash instead of remove it.
+When this is executed from other script or program, then `/bin/rm` is executed.
+
+Usage:
+    rm [OPTION]... SRC [SRC]...
+
+Options:
+    -h, --help
+    -n, --dry-run
+    -d, --delete  ----  `rm -rf SRC` is executed using `/bin/rm` (Be careful!!!)
+        --restore ----  Restore previously moved files to their original locations.
+                            Previously moved history is saved in `~/.myTrash/.moved.log`
+#+end_src
+
+

@@ -1,9 +1,9 @@
 * rm-alternative
 
-#+begin_src bash
+#+begin_src shell
 $ rm --help
-
-This is a modified rm program to move SRC to ~/.myTrash instead of remove it.
+===============
+This is a modified rm program to move SRC to RM_ALT_TRASH instead of remove it.
 When this is executed from other script or program, then `/bin/rm` is executed.
 
 Usage:
@@ -14,7 +14,11 @@ Options:
     -n, --dry-run
     -d, --delete  ----  `rm -rf SRC` is executed using `/bin/rm` (Be careful!!!)
         --restore ----  Restore previously moved files to their original locations.
-                            Previously moved history is saved in `~/.myTrash/.moved.log`
+                            Previously moved history is saved in RM_ALT_HIST
+
+Default values:
+    RM_ALT_TRASH = ~/.myTrash
+    RM_ALT_HIST  = $RM_ALT_TRASH/.moved_hist
 #+end_src
 
 * Features
@@ -22,9 +26,10 @@ Options:
 - When =rm SRC= is executed, =SRC= is moved to =~/.myTrash=
   + If there is another =SRC= with the same name in =~/.myTrash/=, the older one will be renamed as SRC-DATE
 - =rm [-d/--delete] SRC= invokes the system command: =/bin/rm -rf SRC=
-- If you run it with the =-n/---dry-run= option, no files will be moved, only what will be done will be displayed
+- With =-n/---dry-run= option, no files will be moved, only what will be done will be displayed
 - If you replace the system default =/bin/rm= with =rm= in this repository, you can run it with =sudo=
-- If you run =rm= by mistake, you can undo the previous file by running =rm -restore=
+- If you run =rm= by mistake, you can undo by running =rm -restore=
 - (TODO) If =rm= command in this repository is executed from other script or program, =/bin/rm= is executed
 
-
+** LICENSE
+[[LICENSE][MIT]]

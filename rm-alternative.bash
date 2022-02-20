@@ -21,14 +21,6 @@
 #
 
 
-# https://stackoverflow.com/questions/4261876/check-if-bash-script-was-invoked-from-a-shell-or-another-script-application
-# If own `rm` script is executed from other script or program, system's `rm` is executed
-# PSOUT="$(ps -o stat= -p $PPID)$(ps -o stat= -p $$)"
-# if [[ !$PSOUT =~ ^(Ss S+|Ss+ S) ]]; then
-#     /bin/rm $@
-#     exit 0
-# fi
-
 set -Ceu
 set -o functrace
 

@@ -21,15 +21,46 @@ Default values:
     RM_ALT_HIST  = $RM_ALT_TRASH/.moved_hist
 #+end_src
 
-* Features
+
+** Features
 
 - When =rm SRC= is executed, =SRC= is moved to =~/.myTrash=
   + If there is another =SRC= with the same name in =~/.myTrash/=, the older one will be renamed as SRC-DATE
 - =rm [-d/--delete] SRC= invokes the system command: =/bin/rm -rf SRC=
 - With =-n/---dry-run= option, no files will be moved, only what will be done will be displayed
-- If you replace the system default =/bin/rm= with =rm= in this repository, you can run it with =sudo=
 - If you run =rm= by mistake, you can undo by running =rm -restore=
-- (TODO) If =rm= command in this repository is executed from other script or program, =/bin/rm= is executed
+
+** Installation
+
+1. Clone this repository
+
+   #+begin_src shell
+   git clone https://github.com/naoking158/rm-alternative.git
+   #+end_src
+
+2. Set alias in =.bashrc=, =.zshrc=, etc...
+
+   #+begin_src shell
+   alias rm='/path/to/rm-alternative.bash'
+   #+end_src
+
+3. *Option:* By setting =sudo= as an alias, commands registered in the alias can be invoked with =sudo=
+
+   #+begin_src shell
+   alias sudo='sudo '
+   #+end_src
+
+   *Note that it is important to leave a space after sudo.*
+
+   See ~man bash~ for more detail.
+   #+begin_quote
+   If the last character of the alias value is a blank, then the next command word following the alias is also checked for alias expansion.
+   #+end_quote
+
+** References
+
+- https://zenn.dev/kawarimidoll/articles/d546892a6d36eb
+- https://qiita.com/homoluctus/items/ba1a6d03df85e65fc85a
 
 ** LICENSE
 [[LICENSE][MIT]]

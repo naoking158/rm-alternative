@@ -57,6 +57,15 @@ Default values:
    If the last character of the alias value is a blank, then the next command word following the alias is also checked for alias expansion.
    #+end_quote
 
+** Customization
+
+To change the trash directory and the history file, set =RM_ALT_TRASH= and =RM_ALT_HIST= as environment variables in =.profile=, =.bashrc=, =.zshrc=, etc...
+
+#+begin_src shell
+export RM_ALT_TRASH="/path/to/trash"
+export RM_ALT_HIST="${RM_ALT_HIST}/filename_as_you_like"
+#+end_src
+
 ** References
 
 - https://zenn.dev/kawarimidoll/articles/d546892a6d36eb

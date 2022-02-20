@@ -3,7 +3,6 @@
 #
 # ===============
 # This is a modified rm program to move SRC to RM_ALT_TRASH instead of remove it.
-# When this is executed from other script or program, then `/bin/rm` is executed.
 #
 # Usage:
 #     $0 [OPTION]... SRC [SRC]...

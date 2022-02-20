@@ -2,12 +2,12 @@
 
 #+begin_src shell
 $ rm --help
+
 ===============
 This is a modified rm program to move SRC to RM_ALT_TRASH instead of remove it.
-When this is executed from other script or program, then `/bin/rm` is executed.
 
 Usage:
-    rm [OPTION]... SRC [SRC]...
+    rm-alternative.bash [OPTION]... SRC [SRC]...
 
 Options:
     -h, --help

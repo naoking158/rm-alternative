@@ -2,7 +2,7 @@
 #
 #
 # ===============
-# This is a modified rm program to move SRC to ~/.myTrash instead of remove it.
+# This is a modified rm program to move SRC to RM_ALT_TRASH instead of remove it.
 # When this is executed from other script or program, then `/bin/rm` is executed.
 #
 # Usage:
@@ -13,7 +13,11 @@
 #     -n, --dry-run
 #     -d, --delete  ----  `rm -rf SRC` is executed using `/bin/rm` (Be careful!!!)
 #         --restore ----  Restore previously moved files to their original locations.
-#                             Previously moved history is saved in `~/.myTrash/.moved.log`
+#                             Previously moved history is saved in RM_ALT_HIST
+#
+# Default values:
+#     RM_ALT_TRASH = ~/.myTrash
+#     RM_ALT_HIST  = $RM_ALT_TRASH/.moved_hist
 #
 
 
@@ -25,12 +29,35 @@ if [[ !$PSOUT =~ ^(Ss S+|Ss+ S) ]]; then
     exit 0
 fi
 
-
 set -Ceu
+set -o functrace
+
+declare -x RM_ALT_TRASH="${RM_ALT_TRASH:=${HOME}/.myTrash}"
+declare -x RM_ALT_HIST="${RM_ALT_HIST:=${RM_ALT_TRASH}/.moved_hist}"
+
+# Avoid split file name with white space
+SAVEIFS=IFS
+IFS=$(echo -en "\n\b")
+
+function postprocess() {
+    export IFS=$SAVEIFS
+}
+trap postprocess EXIT
+
+function failure() {
+    local lineno=$1
+    local msg=$2
+    echo "Failed at $lineno: $msg"
+}
+trap 'failure ${LINENO} "$BASH_COMMAND"' ERR
 
 function help () {
     awk -v CMD="$(basename $0)" 'NR > 2 {
-    if (/^#/) { sub("^# ?", ""); sub("\\$0", CMD); sub("Be careful!!!", "\033[31;1m\&\033[0m"); print }
+    if (/^#/) {
+        sub("^# ?", "");
+        sub("\\$0", CMD);
+        sub("Be careful!!!", "\033[31;1m\&\033[0m");
+        print }
     else { exit }
     }' $0
     exit 1
@@ -83,52 +110,19 @@ function ink() {
     printf "${open}${color}${text}${close}"
 }
 
-# Avoid split file name with white space
-SAVEIFS=IFS
-IFS=$(echo -en "\n\b")
+function e_error() {
+    printf " \033[31m%s\033[m\n" "✖ $*" 1>&2
+}
 
-# https://zenn.dev/kawarimidoll/articles/d546892a6d36eb
-[[ $# = 0 ]] && help
-while (( $# > 0 )); do
-    case $1 in
-        -h | --help)
-            help
-            ;;
-        -n | --dry-run)
-            isDryRun=$1
-            ;;
-        -d | --delete)
-            isDelete=$1
-            ;;
-        --restore)
-            RESTORE=$1
-            ;;
-        -*)
-            echo
-            echo "Illegal option -- '$(echo $1 | sed 's/^-*//')'." 1>&2
-            help
-            ;;
-        *)
-            if [[ -z ${ARGS:-} ]]; then
-                ARGS=("$1")
-            else
-                ARGS=("${ARGS[@]}" "$1")
-            fi
-            ;;
-    esac
-    shift
-done
-[[ -z ${ARGS:-} && -z ${RESTORE:-} ]] && help
-
-
-TRASH="$HOME/.myTrash"
-[[ ! -e $TRASH ]] && mkdir -p $TRASH
-
+function die() {
+    e_error "$1" 1>&2
+    exit "${2:-1}"
+}
 
 function move_to_trash() {
     SRC="$1"
     FNAME="$(basename $1)"
-    DEST="${TRASH}/${FNAME}"
+    DEST="${RM_ALT_TRASH}/${FNAME}"
 
     if [[ "${isDryRun:-}" ]]; then
         ink cyan "from"
@@ -149,7 +143,7 @@ function move_to_trash() {
 
 function safe_rm() {
     [[ "${isDryRun:-}" ]] && { ink cyan "\nBellow files will be moved...\n"; }
-    for i in "${ARGS[@]}"; do
+    for i in $@; do
         move_to_trash "$i"
     done
     return 0
@@ -158,13 +152,12 @@ function safe_rm() {
 function move_from_trash() {
     DEST="$1"
     FNAME="$(basename $1)"
-    SRC="${TRASH}/${FNAME}"
+    SRC="${RM_ALT_TRASH}/${FNAME}"
 
     ink gray " $DEST\n"
     
-    # If $DEST file is duplicated, older one is renamed with date.
-    [[ -e "$DEST" ]] && { e_important "$DEST is exist."; exit 1; }
-    [[ -z "${isDryRun:-}" ]] && { mv "$SRC" "$DEST"; }
+    [[ -e "$DEST" ]] && die "$DEST is exist."
+    [[ -z "${isDryRun:-}" ]] && mv "$SRC" "$DEST"
     return 0
 }
 
@@ -172,35 +165,68 @@ function restore() {
     ink cyan "\nBellow files are restored...\n"
     while read F; do
         [[ "${#F}" > 0 ]] && { move_from_trash "$F"; } 
-    done < $LOGFILE
+    done < $RM_ALT_HIST
     e_newline
 }
 
 
-LOGFILE="${HOME}/.myTrash/.moved.log"
+# https://zenn.dev/kawarimidoll/articles/d546892a6d36eb
+[[ $# = 0 ]] && help
+while (( $# > 0 )); do
+    case $1 in
+        -h | -help | --help)
+            help
+            ;;
+        -n | --dry-run)
+            isDryRun=$1
+            ;;
+        -d | --delete)
+            isDelete=$1
+            ;;
+        --restore)
+            RESTORE=$1
+            ;;
+        -*)
+            e_error "Illegal option -- '$(echo $1 | sed 's/^-*//')'."
+            # echo
+            # echo "Illegal option -- '$(echo $1 | sed 's/^-*//')'." 1>&2
+            help
+            ;;
+        *)
+            if [[ -z ${ARGS:-} ]]; then
+                ARGS=("$1")
+            else
+                ARGS=("${ARGS[@]}" "$1")
+            fi
+            ;;
+    esac
+    shift
+done
+
+[[ -z ${ARGS:-} && -z ${RESTORE:-} ]] && help
+
+[[ ! -e $RM_ALT_TRASH ]] && mkdir -p $RM_ALT_TRASH
 
 if [[ "${RESTORE:-}" ]]; then
     if [[ "${isDelete:-}" ]]; then
-        e_important "-d/--delete and --restore options cannot be used simultaneously."
-    elif [[ -e $LOGFILE ]]; then
+        die "-d/--delete and --restore options cannot be used simultaneously."
+    elif [[ -e $RM_ALT_HIST ]]; then
         restore        
     else
-        e_important "You have no removed data."
+        die "You have no removed data."
     fi
 else
-    safe_rm && [[ -z "${isDryRun:-}" ]] && {
+    safe_rm "${ARGS[@]}" && [[ -z "${isDryRun:-}" ]] && {
         REMOVED_LIST=()
         for i in "${ARGS[@]}"; do
             REMOVED_LIST+="$(realpath $i)\n"
         done
         [[ -z "${isDelete:-}" ]] && {
-            echo -e "${REMOVED_LIST[@]}" >| ~/.myTrash/.moved.log;
+            echo -e "${REMOVED_LIST[@]}" >| "$RM_ALT_HIST";
         }
     }
 fi
 
 [[ "${isDryRun:-}" ]] && { e_important "This is dry run. File are unchanged."; }
-
-
-IFS=$SAVEIFS
+exit 0
 

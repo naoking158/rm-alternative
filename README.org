@@ -31,6 +31,9 @@ Default values:
 - If you run =rm= by mistake, you can undo by running =rm -restore=
 
 ** Installation
+:PROPERTIES:
+:ID:       937CE8DB-1D50-4368-8499-CA163B0DC41A
+:END:
 
 1. Clone this repository
 
@@ -43,6 +46,8 @@ Default values:
    #+begin_src shell
    alias rm='/path/to/rm-alternative.bash'
    #+end_src
+
+   Add execute permission to =rm-alternative.bash= as like ~chmod +x rm-alternative.bash~ if necessary.
 
 3. *Option:* By setting =sudo= as an alias, commands registered in the alias can be invoked with =sudo=
 

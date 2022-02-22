@@ -5,6 +5,7 @@ set -Ceu
 
 readonly ORIGIN=$(pwd)
 readonly CMD_DIR="$(realpath $(dirname ${BASH_SOURCE[0]}))"
+readonly RM_CMD="${CMD_DIR}/rm-alternative.bash"
 readonly WORKDIR="${CMD_DIR}/workdir"
 [[ -d $WORKDIR ]] || mkdir $WORKDIR
 
@@ -40,7 +41,7 @@ function check_safe_rm() {
     $(eval $cmd) &&
     e_done &&
 
-    cmd="${CMD_DIR}/rm test-dir" &&
+    cmd="${RM_CMD} test-dir" &&
     e_arrow $cmd &&
     $(eval $cmd) &&
     e_done &&
@@ -62,12 +63,12 @@ function check_restore() {
     $(eval $cmd) &&
     e_done &&
 
-    cmd="${CMD_DIR}/rm test-dir" &&
+    cmd="${RM_CMD} test-dir" &&
     e_arrow $cmd &&
     $(eval $cmd) &&
     e_done &&
 
-    cmd="rm --restore" &&
+    cmd="${RM_CMD} --restore" &&
     e_arrow $cmd &&
     eval $cmd &&
     e_done &&
@@ -99,7 +100,7 @@ function check_delete() {
     $(eval $cmd) &&
     e_done &&
 
-    cmd="${CMD_DIR}/rm -d test-dir" &&
+    cmd="${RM_CMD} -d test-dir" &&
     e_arrow $cmd &&
     $(eval $cmd) &&
     e_done &&
@@ -111,25 +112,6 @@ function check_delete() {
     e_done "$FUNCNAME"
 }
 
-function check_system_rm_is_called() {
-    e_header "$FUNCNAME"
-    cd $WORKDIR
-
-    cmd="mkdir test-dir" &&
-    e_arrow $cmd &&
-    eval $cmd &&
-    e_done &&
-
-    echo $(pwd) &&
-    cmd="rm -rf test-dir" &&
-    e_arrow $cmd &&
-    eval $cmd &&
-    e_done &&
-
-    e_done "$FUNCNAME"
-}
-
 check_safe_rm
 check_delete
 check_restore
-check_system_rm_is_called
